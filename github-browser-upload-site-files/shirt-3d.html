@@ -1,0 +1,820 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Atelier Button Shirt — Shirt — Full 3D Scroll Experience</title>
+
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+  }
+}
+</script>
+
+<style>
+:root {
+  --bg:#fff;
+  --text:#0b0b0b;
+  --muted:#4d4d4d;
+}
+* { box-sizing:border-box; }
+html,body {
+  margin:0;
+  padding:0;
+  background:#fff;
+  color:var(--text);
+  font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;
+  overflow-x:hidden;
+}
+#webgl {
+  position:fixed;
+  inset:0;
+  width:100vw;
+  height:100vh;
+  display:block;
+  z-index:1;
+  opacity:0;
+  transition:opacity .45s ease;
+}
+#webgl.ready { opacity:1; }
+.noise {
+  position:fixed; inset:0; z-index:12; pointer-events:none; opacity:.028;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.5'/%3E%3C/svg%3E");
+  mix-blend-mode:multiply;
+}
+.loading {
+  position:fixed; inset:0; z-index:50; background:#fff;
+  display:grid; place-items:center;
+  transition:opacity .4s ease,visibility .4s ease;
+}
+.loading.hide { opacity:0;visibility:hidden; }
+.loader-ring {
+  width:42px;height:42px;border-radius:50%;
+  border:2px solid rgba(0,0,0,.12);border-top-color:#111;
+  margin:0 auto 15px;animation:spin .85s linear infinite;
+}
+@keyframes spin { to { transform:rotate(360deg); } }
+.loading p {
+  margin:0;color:#555;font-size:11px;letter-spacing:.2em;text-transform:uppercase;
+}
+
+nav {
+  display:none !important;
+  position:fixed; top:0; left:0; right:0; height:68px; z-index:20;
+  align-items:center; justify-content:space-between;
+  padding:0 4vw;
+  background:linear-gradient(180deg,rgba(255,255,255,.98),rgba(255,255,255,.76),transparent);
+  pointer-events:none;
+}
+.brand { font-size:12px;font-weight:800;letter-spacing:.22em;text-transform:uppercase; }
+.nav-r { color:#444;font-size:10px;letter-spacing:.18em;text-transform:uppercase; }
+
+.hero {
+  position:relative;z-index:4;min-height:100vh;background:#fff;
+  display:flex;align-items:flex-end;padding:13vh 6vw 8vh;
+}
+.hero-inner { max-width:1100px; }
+.eyebrow {
+  margin-bottom:16px;color:#5a5a5a;font-size:11px;
+  letter-spacing:.28em;text-transform:uppercase;
+}
+h1 {
+  margin:0;font-size:clamp(58px,11vw,150px);
+  line-height:.82;letter-spacing:-.065em;
+}
+.hero p {
+  max-width:760px;margin:25px 0 0;color:#555;
+  font-size:clamp(16px,1.4vw,20px);line-height:1.65;
+}
+.scrollhint {
+  margin-top:32px;display:flex;align-items:center;gap:10px;
+  color:#333;font-size:11px;letter-spacing:.2em;text-transform:uppercase;
+}
+.scrollhint i {
+  display:block;width:7px;height:7px;border-radius:50%;background:#111;
+  box-shadow:0 0 15px rgba(0,0,0,.3);
+}
+
+.story { position:relative;z-index:2;height:760vh; }
+
+.controls {
+  display:none !important;
+  position:fixed;right:3vw;top:88px;z-index:22;
+  width:min(500px,54vw);gap:8px;justify-content:flex-end;flex-wrap:wrap;
+  opacity:0;pointer-events:none;transition:opacity .25s ease;
+}
+.controls.show { opacity:1;pointer-events:auto; }
+.control {
+  appearance:none;border:1px solid rgba(0,0,0,.16);background:rgba(255,255,255,.88);
+  color:#111;padding:10px 13px;border-radius:999px;
+  font-size:10px;letter-spacing:.14em;text-transform:uppercase;cursor:pointer;
+  backdrop-filter:blur(12px);
+  transition:background .18s ease,color .18s ease,transform .18s ease,border-color .18s ease;
+}
+.control:hover,.control.active {
+  background:#111;color:#fff;border-color:#111;transform:translateY(-1px);
+}
+
+.copy {
+  position:fixed;left:4vw;bottom:7vh;z-index:19;
+  width:min(650px,86vw);opacity:0;pointer-events:none;
+}
+.copy.show { opacity:1; }
+.copy .eyebrow { margin-bottom:9px;color:#555; }
+.copy h2 {
+  margin:0;color:#111;font-size:clamp(34px,5.4vw,80px);
+  line-height:.9;letter-spacing:-.062em;
+}
+.copy p {
+  margin:12px 0 0;max-width:570px;color:#2f2f2f;
+  line-height:1.55;font-size:clamp(15px,1.3vw,21px);
+}
+.counter {
+  margin-top:15px;color:#111;font-weight:700;
+  font-size:10px;letter-spacing:.24em;text-transform:uppercase;
+}
+
+.angle-label {
+  display:none !important;
+  position:fixed;right:4vw;bottom:5vh;z-index:18;
+  text-align:right;color:#191919;opacity:.45;pointer-events:none;
+  mix-blend-mode:multiply;
+}
+.angle-label strong {
+  display:block;font-size:clamp(30px,4vw,64px);line-height:.88;letter-spacing:-.05em;
+}
+.angle-label span {
+  display:block;margin-top:8px;font-size:10px;letter-spacing:.18em;text-transform:uppercase;
+}
+
+.outro {
+  position:relative;z-index:4;min-height:100vh;background:#fff;
+  display:flex;align-items:center;padding:14vh 6vw;
+}
+.outro h2 {
+  margin:0;font-size:clamp(54px,10vw,136px);
+  line-height:.84;letter-spacing:-.065em;
+}
+.outro p {
+  max-width:620px;color:#666;line-height:1.7;font-size:17px;
+}
+
+@media(max-width:800px) {
+  nav { height:58px;padding:0 16px; }
+  .hero { padding:16vh 20px 8vh; }
+  .controls {
+    left:14px;right:14px;top:66px;width:auto;justify-content:flex-start;
+  }
+  .control { padding:9px 11px;font-size:9px; }
+  .copy { left:16px;right:16px;bottom:22px;width:auto; }
+  .angle-label { display:none; }
+  .outro { padding:12vh 20px; }
+}
+
+.store-return {
+  position: fixed;
+  top: 20px;
+  left: 22px;
+  z-index: 9999;
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  padding: 11px 15px;
+  border: 1px solid rgba(0,0,0,.14);
+  border-radius: 999px;
+  background: rgba(255,255,255,.82);
+  color: #111;
+  text-decoration: none;
+  font: 700 11px/1 Inter,system-ui,sans-serif;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  box-shadow: 0 8px 28px rgba(0,0,0,.06);
+  transition: transform .2s ease, background .2s ease, color .2s ease;
+}
+.store-return:hover {
+  transform: translateY(-2px);
+  background: #111;
+  color: #fff;
+}
+.store-return svg { width: 14px; height: 14px; }
+@media(max-width:700px){
+  .store-return { top:14px; left:14px; padding:10px 13px; }
+}
+
+
+/* Embedded live-3D product-card mode */
+html.product-preview-mode {
+  background:#ecebea !important;
+  scrollbar-width:none;
+}
+html.product-preview-mode::-webkit-scrollbar,
+html.product-preview-mode body::-webkit-scrollbar {
+  display:none;
+}
+html.product-preview-mode .store-return,
+html.product-preview-mode nav,
+html.product-preview-mode .loading,
+html.product-preview-mode .error,
+html.product-preview-mode .hud,
+html.product-preview-mode .side,
+html.product-preview-mode .copy,
+html.product-preview-mode .controls,
+html.product-preview-mode .angle-label,
+html.product-preview-mode .scrollhint {
+  display:none !important;
+}
+html.product-preview-mode .hero,
+html.product-preview-mode .outro {
+  opacity:0 !important;
+  pointer-events:none !important;
+  background:transparent !important;
+}
+html.product-preview-mode #webgl {
+  opacity:1 !important;
+}
+
+</style>
+</head>
+<body>
+
+<a class="store-return" href="index.html" aria-label="Back to shop">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+    <path d="M19 12H5"></path><path d="m12 19-7-7 7-7"></path>
+  </svg>
+  Shop
+</a>
+
+
+<canvas id="webgl"></canvas>
+<div class="noise"></div>
+
+<div class="loading" id="loading">
+  <div>
+    <div class="loader-ring"></div>
+    <p>Loading shirt geometry</p>
+  </div>
+</div>
+
+<nav>
+  <div class="brand">Shirt / 3D Study</div>
+  <div class="nav-r">White canvas · black type</div>
+</nav>
+
+<section class="hero">
+  <div class="hero-inner">
+    <div class="eyebrow">Scroll-controlled product film</div>
+    <h1>OPEN IT.<br>SEE INSIDE.</h1>
+    <p>The shirt keeps all of its buttons attached while the two front panels swing open wide from the side seams. The camera then travels through front, inside, side, top, bottom and back angles before returning to the front and closing the shirt again.</p>
+    <div class="scrollhint"><i></i> Scroll to start</div>
+  </div>
+</section>
+
+<section class="story" id="story"></section>
+
+<div class="controls" id="controls">
+  <button class="control active" data-view="scroll">Scroll</button>
+  <button class="control" data-view="front">Front</button>
+  <button class="control" data-view="open">Open</button>
+  <button class="control" data-view="inside">Inside</button>
+  <button class="control" data-view="side">Side</button>
+  <button class="control" data-view="top">Top</button>
+  <button class="control" data-view="bottom">Bottom</button>
+  <button class="control" data-view="back">Back</button>
+  <button class="control" data-view="spin">360°</button>
+</div>
+
+<div class="copy" id="copy">
+  <div class="eyebrow">3D scroll sequence</div>
+  <h2 id="title">It arrives.</h2>
+  <p id="desc">The shirt enters the white studio from a three-quarter camera angle.</p>
+  <div class="counter" id="counter">01 / 10</div>
+</div>
+
+<div class="angle-label">
+  <strong>EVERY<br>ANGLE.</strong>
+  <span>Camera + garment motion</span>
+</div>
+
+<section class="outro">
+  <div>
+    <div class="eyebrow">3D sequence complete</div>
+    <h2>OPEN.<br>ROTATE.<br>CLOSE.</h2>
+    <p>The shirt finishes facing forward with its panels fully closed and all buttons still attached, then the 3D experience ends.</p>
+  </div>
+</section>
+
+<script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/ScrollTrigger.min.js"></script>
+
+<script type="module">
+import * as THREE from 'three';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+
+gsap.registerPlugin(ScrollTrigger);
+
+const MODEL_URI = "./assets/shirt/scene.gltf";
+
+const canvas = document.getElementById('webgl');
+const loading = document.getElementById('loading');
+const story = document.getElementById('story');
+const controls = document.getElementById('controls');
+const buttonsUI = [...document.querySelectorAll('.control')];
+const copy = document.getElementById('copy');
+const title = document.getElementById('title');
+const desc = document.getElementById('desc');
+const counter = document.getElementById('counter');
+
+const renderer = new THREE.WebGLRenderer({
+  canvas, antialias:true, alpha:false, powerPreference:'high-performance'
+});
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.04;
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.55));
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0xf4f4f4);
+scene.fog = new THREE.Fog(0xf4f4f4, 10, 30);
+
+const camera = new THREE.PerspectiveCamera(36,1,.1,100);
+camera.position.set(2.2,.7,8.6);
+
+
+scene.add(new THREE.HemisphereLight(0xffffff,0x777777,2.2));
+const key = new THREE.DirectionalLight(0xffffff,3.2);
+key.position.set(5,8,6); key.castShadow=true; key.shadow.mapSize.set(1536,1536); scene.add(key);
+const rim = new THREE.DirectionalLight(0xffffff,1.4);
+rim.position.set(-5,2,-5); scene.add(rim);
+const fill = new THREE.PointLight(0xffffff,1.8,20);
+fill.position.set(2,-1,4); scene.add(fill);
+
+const floor = new THREE.Mesh(
+  new THREE.CircleGeometry(18,96),
+  new THREE.ShadowMaterial({opacity:.12})
+);
+floor.rotation.x=-Math.PI/2;
+floor.position.y=-3.15;
+floor.receiveShadow=true;
+scene.add(floor);
+
+const garment = new THREE.Group();
+scene.add(garment);
+
+const assembly = new THREE.Group();
+garment.add(assembly);
+
+const LEFT_HINGE_X = -0.225;
+const RIGHT_HINGE_X = 0.225;
+const HINGE_Z = -0.015;
+
+const leftPivot = new THREE.Group();
+leftPivot.position.set(LEFT_HINGE_X,0,HINGE_Z);
+assembly.add(leftPivot);
+
+const rightPivot = new THREE.Group();
+rightPivot.position.set(RIGHT_HINGE_X,0,HINGE_Z);
+assembly.add(rightPivot);
+
+const fixedGroup = new THREE.Group();
+assembly.add(fixedGroup);
+
+const physicalButtons = [];
+let modelReady=false;
+let scrollProgress=0;
+let mode='scroll';
+let autoSpin=false;
+let stageId='';
+
+const target={
+  x:0,y:.06,z:0,rx:0,ry:0,rz:0,scale:1,
+  camX:2.2,camY:.7,camZ:8.6,
+  open:0
+};
+const current={...target};
+
+function smooth(a,b,x){
+  const t=Math.max(0,Math.min(1,(x-a)/(b-a)));
+  return t*t*(3-2*t);
+}
+function mix(a,b,t){return a+(b-a)*t}
+function clamp01(x){return Math.max(0,Math.min(1,x))}
+
+function flattenedMesh(obj){
+  const geom=obj.geometry.clone();
+  geom.applyMatrix4(obj.matrixWorld);
+  geom.computeBoundingBox();
+  const mat=Array.isArray(obj.material)?obj.material.map(m=>m.clone()):obj.material.clone();
+  const mesh=new THREE.Mesh(geom,mat);
+  mesh.castShadow=true;
+  mesh.receiveShadow=true;
+  return mesh;
+}
+
+function bboxCenter(mesh){
+  const b=mesh.geometry.boundingBox;
+  return new THREE.Vector3(
+    (b.min.x+b.max.x)/2,
+    (b.min.y+b.max.y)/2,
+    (b.min.z+b.max.z)/2
+  );
+}
+
+function addToLeft(mesh){
+  mesh.position.set(-LEFT_HINGE_X,0,-HINGE_Z);
+  leftPivot.add(mesh);
+}
+function addToRight(mesh){
+  mesh.position.set(-RIGHT_HINGE_X,0,-HINGE_Z);
+  rightPivot.add(mesh);
+}
+function addFixed(mesh){ fixedGroup.add(mesh); }
+
+function classifyAndAdd(obj){
+  const mesh=flattenedMesh(obj);
+  const geomName=(obj.geometry && obj.geometry.name)||'';
+  const matName=Array.isArray(obj.material)
+    ? (obj.material[0]?.name||'')
+    : (obj.material?.name||'');
+  const c=bboxCenter(mesh);
+
+  // Keep the collar / neck zone fixed so the open motion feels hinged below it.
+  if (c.y > 1.50 && Math.abs(c.x) < 0.30) {
+    addFixed(mesh);
+    return;
+  }
+
+  // Center placket pieces: keep buttonholes with the left panel, buttons with the right panel.
+  if (geomName === 'Object_9') {
+    addToLeft(mesh);
+    return;
+  }
+  if (geomName === 'Object_5') {
+    addToRight(mesh);
+    return;
+  }
+
+  if (matName.startsWith('Default_Buttonhole')) {
+    addToLeft(mesh);
+    return;
+  }
+
+  if (matName.startsWith('Gun_Plastic')) {
+    addToRight(mesh);
+    physicalButtons.push(mesh);
+    return;
+  }
+
+  // Keep the central inner/back body fixed.
+  if (geomName === 'Object_2') {
+    addFixed(mesh);
+    return;
+  }
+
+  // Main front panels.
+  if (geomName === 'Object_4') {
+    addToLeft(mesh);
+    return;
+  }
+  if (geomName === 'Object_3') {
+    addToRight(mesh);
+    return;
+  }
+
+  // Split most visible garment pieces by side so the opening is clearly visible.
+  if (c.x < -0.015 && c.y < 1.55) {
+    addToLeft(mesh);
+    return;
+  }
+  if (c.x > 0.015 && c.y < 1.55) {
+    addToRight(mesh);
+    return;
+  }
+
+  // Remaining centered/back/collar geometry stays fixed.
+  addFixed(mesh);
+}
+
+new GLTFLoader().load(MODEL_URI,(gltf)=>{
+  gltf.scene.updateMatrixWorld(true);
+  gltf.scene.traverse(obj=>{
+    if(obj.isMesh) classifyAndAdd(obj);
+  });
+
+  physicalButtons.sort((a,b)=>b.userData.centerY-a.userData.centerY);
+
+  const box=new THREE.Box3().setFromObject(assembly);
+  const center=box.getCenter(new THREE.Vector3());
+  const size=box.getSize(new THREE.Vector3());
+
+  assembly.position.sub(center);
+  const scale=5.15/Math.max(size.x,size.y,size.z);
+  assembly.scale.setScalar(scale);
+
+  const box2=new THREE.Box3().setFromObject(assembly);
+  const center2=box2.getCenter(new THREE.Vector3());
+  assembly.position.sub(center2);
+
+  modelReady=true;
+  loading.classList.add('hide');
+  canvas.classList.add('ready');
+  copy.classList.add('show');
+  controls.classList.add('show');
+  animateCopyIn();
+},undefined,err=>{
+  console.error(err);
+  loading.querySelector('p').textContent='3D model failed to load';
+});
+
+function animateCopyIn(){
+  gsap.killTweensOf([title,desc,counter]);
+  gsap.fromTo([title,desc,counter],{y:24,opacity:0},{y:0,opacity:1,duration:.5,stagger:.06,ease:'power3.out'});
+}
+function setCopy(id,t,d,c){
+  if(stageId===id)return;
+  stageId=id;
+  gsap.killTweensOf([title,desc,counter]);
+  gsap.to([title,desc,counter],{
+    y:-12,opacity:0,duration:.16,stagger:.025,ease:'power2.in',
+    onComplete:()=>{
+      title.textContent=t;desc.textContent=d;counter.textContent=c;
+      gsap.set([title,desc,counter],{y:20,opacity:0});
+      gsap.to([title,desc,counter],{y:0,opacity:1,duration:.48,stagger:.055,ease:'power3.out'});
+    }
+  });
+}
+
+function resetTarget(){
+  target.x=0;target.y=.06;target.z=0;
+  target.rx=0;target.ry=0;target.rz=0;target.scale=1;
+  target.camX=0;target.camY=.2;target.camZ=7.6;
+  target.open=0;
+}
+
+function setCamera(x,y,z){target.camX=x;target.camY=y;target.camZ=z}
+
+function updateScroll(p){
+  resetTarget();
+
+  // 1 — arrival
+  const arrive=smooth(0,.11,p);
+  target.x=mix(2.0,0,arrive);
+  target.y=mix(.30,.06,arrive);
+  target.z=mix(-1.1,0,arrive);
+  target.ry=mix(-.65,0,arrive);
+  target.rz=mix(-.12,0,arrive);
+  target.scale=mix(.78,1,arrive);
+  setCamera(mix(2.8,1.2,arrive),mix(.9,.35,arrive),mix(9.0,7.9,arrive));
+
+  if(p<.12) setCopy('01','It arrives.','The shirt enters from depth while the camera slides into position.','01 / 09');
+
+  // 2 — front view
+  if(p>=.10){
+    const s=smooth(.10,.21,p);
+    setCamera(mix(1.2,0,s),mix(.35,.18,s),mix(7.9,7.15,s));
+    if(p<.22)setCopy('02','Front view.','The camera settles directly in front of the closed shirt.','02 / 09');
+  }
+
+  // 3 — shirt opens WIDE. Buttons remain attached to the panel.
+  if(p>=.20){
+    const s=smooth(.20,.38,p);
+    target.open=s;
+    setCamera(
+      mix(0,.75,s),
+      mix(.18,.32,s),
+      mix(7.15,6.85,s)
+    );
+    if(p<.39)setCopy('03','Open wide.','The shirt itself opens wide: the left and right front halves swing apart while the buttons stay attached to the shirt.','03 / 09');
+  }
+
+  // 4 — inside
+  if(p>=.36){
+    const s=smooth(.36,.49,p);
+    target.open=1;
+    setCamera(mix(.75,0,s),mix(.32,.72,s),mix(6.85,5.6,s));
+    if(p<.50)setCopy('04','Inside view.','With the shirt fully open, the camera moves closer to show the inside.','04 / 09');
+  }
+
+  // 5 — side orbit
+  if(p>=.48){
+    const s=smooth(.48,.59,p);
+    target.open=1;
+    setCamera(mix(0,5.2,s),mix(.72,.45,s),mix(5.6,3.8,s));
+    if(p<.60)setCopy('05','Side angle.','The camera orbits around the fully opened shirt.','05 / 09');
+  }
+
+  // 6 — top view
+  if(p>=.58){
+    const s=smooth(.58,.68,p);
+    target.open=1;
+    setCamera(mix(5.2,0,s),mix(.45,6.2,s),mix(3.8,1.9,s));
+    if(p<.69)setCopy('06','Top view.','The camera rises above the shirt to show the collar, shoulders and opening.','06 / 09');
+  }
+
+  // 7 — bottom view
+  if(p>=.67){
+    const s=smooth(.67,.77,p);
+    target.open=1;
+    setCamera(0,mix(6.2,-5.1,s),mix(1.9,2.5,s));
+    if(p<.78)setCopy('07','Bottom view.','The camera drops underneath for a lower-angle view of the open garment.','07 / 09');
+  }
+
+  // 8 — back view
+  if(p>=.76){
+    const s=smooth(.76,.87,p);
+    target.open=1;
+    setCamera(0,mix(-5.1,.2,s),mix(2.5,7.6,s));
+    target.ry=mix(0,Math.PI,s);
+    if(p<.88)setCopy('08','Back view.','The camera returns to studio height while the shirt rotates to show the back.','08 / 09');
+  }
+
+  // 9 — rotate back to front, then close shirt completely
+  if(p>=.86){
+    const turn=smooth(.86,.93,p);
+    const close=smooth(.91,.985,p);
+    const exit=smooth(.97,1,p);
+
+    target.ry=mix(Math.PI,Math.PI*2,turn);
+    target.open=1-close;
+
+    setCamera(0,.2,mix(7.6,8.9,exit));
+    target.scale=mix(1,.86,exit);
+    target.y=mix(.06,.18,exit);
+    target.z=mix(0,-.45,exit);
+
+    setCopy(
+      '09',
+      'Front. Close. End.',
+      'The shirt rotates back to the front, both panels close smoothly, and the 3D sequence ends.',
+      '09 / 09'
+    );
+  }
+}
+
+function setPreset(view){
+  autoSpin=false;
+  resetTarget();
+
+  if(view==='front'){
+    setCamera(0,.2,7.2);
+    setCopy('m-front','Front.','Straight-on closed-shirt view.','Front');
+  } else if(view==='open'){
+    target.open=1;
+    setCamera(.8,.35,6.8);
+    setCopy('m-open','Open wide.','Both front panels swing fully open while the buttons remain attached to the shirt.','Open');
+  } else if(view==='inside'){
+    target.open=1;
+    setCamera(0,.75,5.6);
+    setCopy('m-inside','Inside.','Close camera view into the fully opened shirt.','Inside');
+  } else if(view==='side'){
+    target.open=1;
+    setCamera(5.2,.45,3.8);
+    setCopy('m-side','Side.','A true camera-side view of the open garment.','Side');
+  } else if(view==='top'){
+    target.open=1;
+    setCamera(0,6.2,1.9);
+    setCopy('m-top','Top.','Overhead camera view.','Top');
+  } else if(view==='bottom'){
+    target.open=1;
+    setCamera(0,-5.1,2.5);
+    setCopy('m-bottom','Bottom.','Low underside camera view.','Bottom');
+  } else if(view==='back'){
+    target.open=1;
+    target.ry=Math.PI;
+    setCamera(0,.2,7.6);
+    setCopy('m-back','Back.','Full rear garment view.','Back');
+  } else if(view==='spin'){
+    target.open=1;
+    setCamera(0,.35,7.7);
+    autoSpin=true;
+    setCopy('m-spin','360° view.','The fully opened shirt rotates continuously.','360°');
+  }
+}
+
+buttonsUI.forEach(btn=>{
+  btn.addEventListener('click',()=>{
+    const view=btn.dataset.view;
+    buttonsUI.forEach(b=>b.classList.toggle('active',b===btn));
+    mode=view;
+    if(view==='scroll'){
+      autoSpin=false;
+      stageId='';
+      updateScroll(scrollProgress);
+      animateCopyIn();
+    } else {
+      setPreset(view);
+    }
+  });
+});
+
+ScrollTrigger.create({
+  trigger:'.story',
+  start:'top top',
+  end:'bottom bottom',
+  scrub:1,
+  onEnter:()=>{copy.classList.add('show');controls.classList.add('show')},
+  onEnterBack:()=>{copy.classList.add('show');controls.classList.add('show')},
+  onLeave:()=>{copy.classList.remove('show');controls.classList.remove('show')},
+  onLeaveBack:()=>{copy.classList.remove('show');controls.classList.remove('show')},
+  onUpdate:self=>{
+    scrollProgress=self.progress;
+    if(mode==='scroll')updateScroll(scrollProgress);
+  }
+});
+
+function resize(){
+  const w=window.innerWidth,h=window.innerHeight;
+  renderer.setSize(w,h,false);
+  
+  camera.aspect=w/h;
+  camera.fov=w<700?48:36;
+  camera.updateProjectionMatrix();
+}
+window.addEventListener('resize',resize);
+resize();
+
+const clock=new THREE.Clock();
+let spinAngle=0;
+
+function animate(){
+  requestAnimationFrame(animate);
+  const dt=Math.min(clock.getDelta(),.05);
+  const t=clock.elapsedTime;
+  const a=1-Math.exp(-dt*8.5);
+
+  if(modelReady){
+    if(mode!=='scroll')setPreset(mode);
+
+    for(const k of ['x','y','z','rx','ry','rz','scale','camX','camY','camZ','open']){
+      current[k]+=(target[k]-current[k])*a;
+    }
+
+    garment.position.set(current.x,current.y+Math.sin(t*1.4)*.025,current.z);
+    garment.rotation.set(current.rx,current.ry,current.rz);
+    garment.scale.setScalar(current.scale);
+
+    // Correct panel hinge direction:
+    // left center edge swings toward camera with negative Y rotation,
+    // right center edge swings toward camera with positive Y rotation.
+    // Open the actual shirt panels very wide.
+    // Buttons remain attached to the right panel and move naturally with it.
+    const openEase = current.open * current.open * (3 - 2 * current.open);
+    const openAngle = openEase * 1.95; // wide opening, ~112 degrees per side
+
+    leftPivot.rotation.y = -openAngle;
+    rightPivot.rotation.y = openAngle;
+
+    // A small outward/forward movement makes the opening feel less stiff.
+    leftPivot.position.x = LEFT_HINGE_X - openEase * .16;
+    rightPivot.position.x = RIGHT_HINGE_X + openEase * .16;
+    leftPivot.position.z = HINGE_Z + openEase * .14;
+    rightPivot.position.z = HINGE_Z + openEase * .14;
+
+    if(autoSpin){
+      spinAngle+=dt*.65;
+      garment.rotation.y=spinAngle;
+    } else {
+      spinAngle=garment.rotation.y;
+    }
+
+    camera.position.set(current.camX,current.camY,current.camZ);
+    camera.lookAt(0,0,0);
+  }
+
+  renderer.render(scene,camera);
+}
+animate();
+</script>
+
+<script>
+(() => {
+  const params = new URLSearchParams(location.search);
+  if (!params.has('preview')) return;
+
+  document.documentElement.classList.add('product-preview-mode');
+
+  const moveToPreview = () => {
+    const target = window.innerHeight * 2.06;
+    window.scrollTo(0, target);
+  };
+
+  window.addEventListener('load', () => {
+    setTimeout(moveToPreview, 650);
+    setTimeout(moveToPreview, 1600);
+    setTimeout(moveToPreview, 3200);
+  });
+
+  // Prevent accidental manual scrolling inside the store card.
+  window.addEventListener('wheel', e => e.preventDefault(), { passive:false });
+  window.addEventListener('touchmove', e => e.preventDefault(), { passive:false });
+})();
+</script>
+
+</body>
+</html>
